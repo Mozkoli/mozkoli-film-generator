@@ -142,13 +142,14 @@
     .entry-title { margin:0 0 7px; color:#e7e3dd; font-size:13px; font-weight:650; }
     .entry p { margin:4px 0 0; color:#aaa7b0; font-size:12px; line-height:1.65; white-space:pre-wrap; }
     .entry .label { color:#77737d; font:9px var(--mono); letter-spacing:.08em; text-transform:uppercase; margin-right:6px; }
-    .copy-row { padding: 13px 20px 17px; border-top: 1px solid var(--line-soft); }
+    .copy-row { padding: 13px 20px 17px; border-top: 1px solid var(--line-soft); display:flex; align-items:center; flex-wrap:wrap; gap:9px; }
     .copy-button {
-      border: 1px solid #3a3740; background: transparent; color: #aaa7b0; padding: 8px 11px;
+      min-height:42px; border: 1px solid #3a3740; background: transparent; color: #aaa7b0; padding: 8px 11px;
       font: 9px var(--mono); letter-spacing: .07em; text-transform: uppercase; cursor:pointer;
       transition: color .18s, border-color .18s, background .18s;
     }
     .copy-button:hover { color: var(--gold); border-color: var(--gold-muted); background:#d4af370a; }
+    .copy-open-button { color:var(--gold); border-color:var(--gold-muted); }
     .copy-button.copied { color: #a8c4a0; border-color:#55714e; }
     .copy-mark { margin-right: 7px; }
     .music-block { padding:20px; }
@@ -278,7 +279,7 @@
         return Array.isArray(value) ? value : [];
       }
 
-      function addCopyControl(container, getText) {
+      function addCopyControl(container, getText, openAction) {
         const row = document.createElement("div");
         row.className = "copy-row";
         const copy = document.createElement("button");
@@ -301,10 +302,33 @@
           }
         });
         row.append(copy);
+        if (openAction) {
+          const copyOpen = document.createElement("button");
+          copyOpen.type = "button";
+          copyOpen.className = "copy-button copy-open-button";
+          copyOpen.textContent = openAction.label;
+          copyOpen.addEventListener("click", async () => {
+            // Open synchronously from the click so browser popup blockers allow it.
+            window.open(openAction.url, "_blank", "noopener,noreferrer");
+            try {
+              await navigator.clipboard.writeText(getText());
+              copyOpen.classList.add("copied");
+              copyOpen.textContent = "Copied · opened";
+              window.setTimeout(() => {
+                copyOpen.classList.remove("copied");
+                copyOpen.textContent = openAction.label;
+              }, 1800);
+            } catch {
+              copyOpen.textContent = "Copy unavailable";
+              window.setTimeout(() => { copyOpen.textContent = openAction.label; }, 1800);
+            }
+          });
+          row.append(copyOpen);
+        }
         container.append(row);
       }
 
-      function sectionCard(index, title, count, entries, plainText) {
+      function sectionCard(index, title, count, entries, plainText, openAction) {
         const card = document.createElement("article");
         card.className = "section-card";
         const head = document.createElement("div");
@@ -319,7 +343,7 @@
         body.className = "section-body";
         entries.forEach((entry, i) => body.append(entry, document.createDocumentFragment()));
         card.append(body);
-        addCopyControl(card, plainText);
+        addCopyControl(card, plainText, openAction);
         return card;
       }
 
@@ -403,7 +427,10 @@
           copy.append(textElement("p", "", item.prompt));
           entry.append(copy);
           return entry;
-        }), () => imagePrompts.map((item, i) => `Shot ${item.shot ?? i + 1}\n${item.prompt || "—"}`).join("\n\n")));
+        }), () => imagePrompts.map((item, i) => `Shot ${item.shot ?? i + 1}\n${item.prompt || "—"}`).join("\n\n"), {
+          label: "Copy & Open Bing",
+          url: "https://www.bing.com/images/create"
+        }));
 
         const motionPrompts = normalizedList(plan.motionPrompts);
         sections.append(sectionCard(4, "Gemini video prompts", `${motionPrompts.length} prompts`, motionPrompts.map((item, i) => {
@@ -415,7 +442,10 @@
           copy.append(textElement("p", "", item.prompt));
           entry.append(copy);
           return entry;
-        }), () => motionPrompts.map((item, i) => `Shot ${item.shot ?? i + 1}\n${item.prompt || "—"}`).join("\n\n")));
+        }), () => motionPrompts.map((item, i) => `Shot ${item.shot ?? i + 1}\n${item.prompt || "—"}`).join("\n\n"), {
+          label: "Copy & Open Gemini",
+          url: "https://gemini.google.com"
+        }));
 
         const musicCard = document.createElement("article");
         musicCard.className = "section-card";
@@ -430,7 +460,10 @@
         musicBody.className = "music-block";
         musicBody.append(textElement("p", "", plan.musicPrompt));
         musicCard.append(musicHead, musicBody);
-        addCopyControl(musicCard, () => String(plan.musicPrompt || "—"));
+        addCopyControl(musicCard, () => String(plan.musicPrompt || "—"), {
+          label: "Copy & Open Suno",
+          url: "https://suno.com"
+        });
         sections.append(musicCard);
       }
 
