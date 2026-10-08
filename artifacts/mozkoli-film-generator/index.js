@@ -14,6 +14,74 @@ const FILM_PLAN_INSTRUCTIONS = [
   '{"concept":"string","logline":"string","genre":"string","tone":"string","shotList":[{"shot":1,"title":"string","visual":"string","action":"string","dialogue":"string"}],"characterBible":[{"name":"string","role":"string","description":"string","arc":"string"}],"imagePrompts":[{"shot":1,"prompt":"string"}],"motionPrompts":[{"shot":1,"prompt":"string"}],"musicPrompt":"string"}',
   "Requirements: shotList, imagePrompts, and motionPrompts must each contain exactly 7 numbered entries. Make the shots a coherent beginning, middle, and end. Give the characterBible 2 to 4 principal characters. Keep character appearance and locations consistent across image prompts. Write imagePrompts as detailed Bing image-generation prompts with composition, lens, lighting, color, setting, and aspect ratio. Write motionPrompts as Gemini video prompts with subject movement, camera movement, pacing, and duration. Write musicPrompt as one specific Suno AI score prompt with instrumentation, tempo, mood, dynamics, and vocal guidance. Treat cultural and spiritual material respectfully.",
 ].join("\n\n");
+const PLAN_STRING = { type: "string" };
+const PLAN_SHOT_SCHEMA = {
+  type: "object",
+  properties: {
+    shot: { type: "integer" },
+    title: PLAN_STRING,
+    visual: PLAN_STRING,
+    action: PLAN_STRING,
+    dialogue: PLAN_STRING,
+  },
+  required: ["shot", "title", "visual", "action", "dialogue"],
+  additionalProperties: false,
+};
+const PLAN_PROMPT_SCHEMA = {
+  type: "object",
+  properties: {
+    shot: { type: "integer" },
+    prompt: PLAN_STRING,
+  },
+  required: ["shot", "prompt"],
+  additionalProperties: false,
+};
+const FILM_PLAN_RESPONSE_FORMAT = {
+  type: "json_schema",
+  json_schema: {
+    name: "film_plan",
+    strict: true,
+    schema: {
+      type: "object",
+      properties: {
+        concept: PLAN_STRING,
+        logline: PLAN_STRING,
+        genre: PLAN_STRING,
+        tone: PLAN_STRING,
+        shotList: { type: "array", items: PLAN_SHOT_SCHEMA },
+        characterBible: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              name: PLAN_STRING,
+              role: PLAN_STRING,
+              description: PLAN_STRING,
+              arc: PLAN_STRING,
+            },
+            required: ["name", "role", "description", "arc"],
+            additionalProperties: false,
+          },
+        },
+        imagePrompts: { type: "array", items: PLAN_PROMPT_SCHEMA },
+        motionPrompts: { type: "array", items: PLAN_PROMPT_SCHEMA },
+        musicPrompt: PLAN_STRING,
+      },
+      required: [
+        "concept",
+        "logline",
+        "genre",
+        "tone",
+        "shotList",
+        "characterBible",
+        "imagePrompts",
+        "motionPrompts",
+        "musicPrompt",
+      ],
+      additionalProperties: false,
+    },
+  },
+};
 
 app.disable("x-powered-by");
 app.use(express.json({ limit: "16kb" }));
@@ -114,10 +182,10 @@ async function requestFilmPlan({ provider, url, token, model, messages }) {
       body: JSON.stringify({
         model,
         messages,
-        max_tokens: 4096,
+        max_tokens: 7000,
         temperature: 0.7,
         ...(provider === "Pollinations"
-          ? { response_format: { type: "json_object" } }
+          ? { response_format: FILM_PLAN_RESPONSE_FORMAT }
           : {}),
       }),
       signal: controller.signal,
@@ -145,10 +213,14 @@ async function requestFilmPlan({ provider, url, token, model, messages }) {
     const content = getMessageText(payload?.choices?.[0]?.message?.content);
     const filmPlan = content ? parseFilmPlan(content) : null;
     if (!filmPlan) {
+      console.error(
+        `[${provider}] Invalid film plan response`,
+        JSON.stringify(summarizeCompletion(payload, content)),
+      );
       throw new ProviderRequestError(
         provider,
         502,
-        `${provider} returned an incomplete film plan.`,
+        `${provider} returned a film plan that did not pass validation.`,
       );
     }
     return filmPlan;
@@ -206,6 +278,40 @@ function getMessageText(content) {
   return "";
 }
 
+function summarizeCompletion(payload, content) {
+  const message = payload?.choices?.[0]?.message;
+  let parsed;
+  try {
+    const trimmed = content.trim();
+    const firstBrace = trimmed.indexOf("{");
+    const lastBrace = trimmed.lastIndexOf("}");
+    if (firstBrace >= 0 && lastBrace > firstBrace) {
+      parsed = JSON.parse(trimmed.slice(firstBrace, lastBrace + 1));
+    }
+  } catch {
+    // The summary only reports structure; never log the generated text itself.
+  }
+  const plan = parsed?.filmPlan ?? parsed;
+  return {
+    finishReason: payload?.choices?.[0]?.finish_reason ?? null,
+    messageFields: message && typeof message === "object" ? Object.keys(message) : [],
+    contentLength: content.length,
+    planFields: plan && typeof plan === "object" ? Object.keys(plan) : [],
+    counts: {
+      shots: Array.isArray(plan?.shotList) ? plan.shotList.length : null,
+      characters: Array.isArray(plan?.characterBible)
+        ? plan.characterBible.length
+        : null,
+      imagePrompts: Array.isArray(plan?.imagePrompts)
+        ? plan.imagePrompts.length
+        : null,
+      motionPrompts: Array.isArray(plan?.motionPrompts)
+        ? plan.motionPrompts.length
+        : null,
+    },
+  };
+}
+
 class ProviderRequestError extends Error {
   constructor(provider, status, userMessage) {
     super(`${provider} request failed`);
@@ -226,7 +332,8 @@ function parseFilmPlan(text) {
 
   let plan;
   try {
-    plan = JSON.parse(unfenced.slice(firstBrace, lastBrace + 1));
+    const parsed = JSON.parse(unfenced.slice(firstBrace, lastBrace + 1));
+    plan = parsed?.filmPlan ?? parsed;
   } catch {
     return null;
   }
