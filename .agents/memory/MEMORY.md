@@ -1,0 +1,1 @@
+- [Pollinations keyless text API](pollinations-keyless-api.md) — the modern API requires a key; the legacy anonymous route may fail independently, so verify it live.

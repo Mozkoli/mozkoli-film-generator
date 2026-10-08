@@ -1,0 +1,29 @@
+kind = "web"
+previewPath = "/"
+title = "Mozkoli Film Generator"
+description = "A story-to-film planning tool that uses Pollinations AI to create a seven-shot script, character bible, image and motion prompts, and a soundtrack prompt from a short idea."
+version = "1.0.0"
+id = "artifacts/mozkoli-film-generator"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 23523
+
+[services.development]
+run = "pnpm --filter @workspace/mozkoli-film-generator run dev"
+
+[services.production.run]
+args = ["node", "artifacts/mozkoli-film-generator/index.js"]
+
+[services.production.run.env]
+PORT = "23523"
+NODE_ENV = "production"
+
+[services.production.health.startup]
+path = "/healthz"
+
+[services.env]
+PORT = "23523"
+BASE_PATH = "/"
