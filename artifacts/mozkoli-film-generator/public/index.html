@@ -3,8 +3,14 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#0a0a0f">
-  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <meta name="theme-color" content="#D4AF37">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Mozkoli">
+  <link rel="manifest" href="/manifest.json">
+  <link rel="icon" type="image/svg+xml" href="/icons/mozkoli.svg">
+  <link rel="apple-touch-icon" sizes="180x180" href="/icons/mozkoli-180.png">
   <title>Mozkoli — Film development desk</title>
   <style>
     :root {
@@ -78,6 +84,30 @@
       letter-spacing: -.045em;
     }
     .intro p { max-width: 490px; margin: auto; color: #a9a6ad; font-size: 14px; line-height: 1.7; }
+    .install-app-button {
+      display:inline-flex; align-items:center; justify-content:center; gap:9px; min-height:42px; margin-top:17px;
+      padding:0 15px; border:1px solid var(--gold-muted); background:transparent; color:var(--gold);
+      font:9px var(--mono); letter-spacing:.1em; text-transform:uppercase; cursor:pointer;
+      transition:background .18s, border-color .18s;
+    }
+    .install-app-button:hover { border-color:var(--gold); background:#d4af370d; }
+    .install-app-button[hidden] { display:none; }
+    .install-dialog {
+      width:min(420px, calc(100% - 30px)); padding:0; border:1px solid #514728;
+      background:var(--panel); color:var(--paper); box-shadow:0 24px 90px #000b;
+    }
+    .install-dialog::backdrop { background:#050508d9; backdrop-filter:blur(4px); }
+    .install-dialog-inner { padding:22px; }
+    .install-dialog-top { display:flex; justify-content:space-between; align-items:center; gap:14px; }
+    .install-dialog-kicker { color:var(--gold-muted); font:9px var(--mono); letter-spacing:.14em; text-transform:uppercase; }
+    .install-dialog-close {
+      width:36px; height:36px; border:1px solid var(--line); background:transparent; color:var(--muted);
+      font-size:20px; cursor:pointer;
+    }
+    .install-dialog h2 { margin:13px 0 8px; color:var(--gold); font:400 25px var(--serif); }
+    .install-dialog p { color:#b2aeb7; font-size:12px; line-height:1.6; }
+    .install-steps { padding-left:20px; color:#d3cfd6; font-size:12px; line-height:1.8; }
+    .install-dialog-done { width:100%; justify-content:center; margin-top:10px; }
     .workbench {
       max-width: 790px; margin: 0 auto; border: 1px solid #34313a; background: #101015;
       box-shadow: 0 24px 80px #0005; animation: rise .7s .1s ease both;
@@ -274,6 +304,9 @@
       <div class="eyebrow">From first thought to first frame</div>
       <h1>Give your story<br>its first light.</h1>
       <p>A focused development desk for the film taking shape in your head. Bring the raw idea; leave with a vision you can put to work.</p>
+      <button class="install-app-button" id="install-app-button" type="button" hidden>
+        <span>Install App</span><span aria-hidden="true">↗</span>
+      </button>
     </section>
 
     <form class="workbench" id="story-form">
@@ -310,6 +343,22 @@
     </section>
   </main>
   <footer class="shell footer"><span>Mozkoli Film Generator</span><span>Make something that stays.</span></footer>
+  <dialog class="install-dialog" id="ios-install-dialog" aria-labelledby="install-dialog-title">
+    <div class="install-dialog-inner">
+      <div class="install-dialog-top">
+        <span class="install-dialog-kicker">Add Mozkoli to your home screen</span>
+        <button class="install-dialog-close" id="close-install-dialog" type="button" aria-label="Close install instructions">×</button>
+      </div>
+      <h2 id="install-dialog-title">Install Mozkoli</h2>
+      <p>Use Safari’s share menu to add the film desk to your home screen:</p>
+      <ol class="install-steps">
+        <li>Tap the Share button in Safari.</li>
+        <li>Choose “Add to Home Screen”.</li>
+        <li>Tap “Add” to finish.</li>
+      </ol>
+      <button class="generate install-dialog-done" id="install-dialog-done" type="button">Got it</button>
+    </div>
+  </dialog>
   <script>
     (() => {
       "use strict";
@@ -879,6 +928,78 @@
           button.removeAttribute("aria-busy");
         }
       });
+
+      const installAppButton = document.getElementById("install-app-button");
+      const iosInstallDialog = document.getElementById("ios-install-dialog");
+      const closeInstallDialogButton = document.getElementById("close-install-dialog");
+      const installDialogDoneButton = document.getElementById("install-dialog-done");
+      const isIosDevice =
+        /iPhone|iPad|iPod/i.test(navigator.userAgent) ||
+        (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+      const isAppInstalled =
+        Boolean(window.matchMedia?.("(display-mode: standalone)").matches) ||
+        navigator.standalone === true;
+      let deferredInstallPrompt = null;
+
+      function closeIosInstallDialog() {
+        if (typeof iosInstallDialog.close === "function") {
+          iosInstallDialog.close();
+        } else {
+          iosInstallDialog.removeAttribute("open");
+        }
+      }
+
+      if (!isAppInstalled && isIosDevice) {
+        installAppButton.hidden = false;
+      }
+
+      window.addEventListener("beforeinstallprompt", (event) => {
+        if (isAppInstalled) return;
+        event.preventDefault();
+        deferredInstallPrompt = event;
+        installAppButton.hidden = false;
+      });
+
+      installAppButton.addEventListener("click", async () => {
+        if (isIosDevice) {
+          if (typeof iosInstallDialog.showModal === "function") {
+            iosInstallDialog.showModal();
+          } else {
+            iosInstallDialog.setAttribute("open", "");
+          }
+          return;
+        }
+        if (!deferredInstallPrompt) return;
+        const installPrompt = deferredInstallPrompt;
+        deferredInstallPrompt = null;
+        installAppButton.disabled = true;
+        try {
+          await installPrompt.prompt();
+          const choice = await installPrompt.userChoice;
+          if (choice?.outcome === "accepted") installAppButton.hidden = true;
+        } finally {
+          installAppButton.disabled = false;
+        }
+      });
+
+      closeInstallDialogButton.addEventListener("click", closeIosInstallDialog);
+      installDialogDoneButton.addEventListener("click", closeIosInstallDialog);
+      iosInstallDialog.addEventListener("click", (event) => {
+        if (event.target === iosInstallDialog) closeIosInstallDialog();
+      });
+
+      window.addEventListener("appinstalled", () => {
+        deferredInstallPrompt = null;
+        installAppButton.hidden = true;
+      });
+
+      if ("serviceWorker" in navigator) {
+        window.addEventListener("load", () => {
+          navigator.serviceWorker
+            .register("/service-worker.js", { scope: "/" })
+            .catch((error) => console.warn("Mozkoli offline support could not start.", error));
+        });
+      }
     })();
   </script>
 </body>
