@@ -1,1 +1,2 @@
 - [Pollinations keyless text API](pollinations-keyless-api.md) — the modern API requires a key; the legacy anonymous route may fail independently, so verify it live.
+- [Pollinations video generation](pollinations-video-generation.md) — video calls spend Pollen and return MP4 bytes; use mocked media for tests unless a live clip is requested.

@@ -64,6 +64,12 @@
     .desk-label { color: var(--muted); font: 10px var(--mono); letter-spacing: .11em; text-transform: uppercase; }
     .status { display: inline-flex; align-items: center; gap: 9px; font: 10px var(--mono); color: var(--muted); }
     .status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--gold); box-shadow: 0 0 0 3px #d4af371b; }
+    .topbar-meta { display:flex; align-items:center; justify-content:flex-end; gap:11px; }
+    .credits-display {
+      max-width:210px; overflow:hidden; padding:6px 8px; border:1px solid #514728;
+      color:#d8c274; font:9px var(--mono); letter-spacing:.035em; text-overflow:ellipsis; white-space:nowrap;
+    }
+    .credits-display[hidden] { display:none; }
     main { padding: 58px 0 92px; }
     .intro { max-width: 720px; margin: 0 auto 43px; text-align: center; animation: rise .6s ease both; }
     .eyebrow { color: var(--gold); font: 10px var(--mono); letter-spacing: .2em; text-transform: uppercase; }
@@ -142,6 +148,47 @@
     .entry-title { margin:0 0 7px; color:#e7e3dd; font-size:13px; font-weight:650; }
     .entry p { margin:4px 0 0; color:#aaa7b0; font-size:12px; line-height:1.65; white-space:pre-wrap; }
     .entry .label { color:#77737d; font:9px var(--mono); letter-spacing:.08em; text-transform:uppercase; margin-right:6px; }
+    .video-model-toolbar {
+      display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); align-items:center; gap:16px;
+      margin:-5px -20px 5px; padding:14px 20px; border-bottom:1px solid var(--line-soft); background:#101015;
+    }
+    .video-model-control { display:flex; align-items:center; gap:10px; min-width:0; }
+    .video-model-control label { flex:none; color:var(--gold-muted); font:9px var(--mono); letter-spacing:.08em; text-transform:uppercase; }
+    .video-model-select {
+      min-width:0; width:100%; min-height:42px; padding:0 11px; border:1px solid #3a3740;
+      color:var(--paper); background:#0b0b10; font:10px var(--mono); cursor:pointer;
+    }
+    .video-model-select:focus { outline:1px solid var(--gold-muted); border-color:var(--gold-muted); }
+    .video-model-select:disabled { opacity:.65; cursor:wait; }
+    .video-model-note { margin:0; color:var(--muted); font-size:10px; line-height:1.5; }
+    .clip-button, .generate-all-clips {
+      min-height:42px; display:inline-flex; align-items:center; justify-content:center; gap:9px;
+      padding:0 14px; border:1px solid var(--gold); background:var(--gold); color:#15120a;
+      font:9px var(--mono); letter-spacing:.07em; text-transform:uppercase; cursor:pointer;
+      transition:background .18s, transform .18s, border-color .18s;
+    }
+    .clip-button:hover:not(:disabled), .generate-all-clips:hover:not(:disabled) {
+      background:#e2c55f; border-color:#e2c55f; transform:translateY(-1px);
+    }
+    .clip-button:disabled, .generate-all-clips:disabled { cursor:wait; opacity:.72; }
+    .clip-button-spinner { width:13px; height:13px; border:1.5px solid #15120a55; border-top-color:#15120a; border-radius:50%; animation:spin .75s linear infinite; }
+    .clip-button-spinner[hidden] { display:none; }
+    .clip-status {
+      display:flex; align-items:center; gap:8px; margin-top:9px; color:var(--gold-muted);
+      font:9px var(--mono); line-height:1.5;
+    }
+    .clip-status[hidden] { display:none; }
+    .clip-status.error { color:#e2988e; }
+    .clip-status .spinner { flex:none; border-color:#d4af3755; border-top-color:var(--gold); }
+    .clip-error { margin:9px 0 0; color:#e2988e; font-size:11px; line-height:1.5; }
+    .clip-error[hidden] { display:none; }
+    .generated-video {
+      display:block; width:100%; max-height:560px; margin-top:13px; border:1px solid var(--line);
+      background:#000; aspect-ratio:16/9; object-fit:contain;
+    }
+    .generated-video[hidden] { display:none; }
+    .video-batch-row { margin:5px -20px -18px; padding:16px 20px 18px; border-top:1px solid var(--line-soft); }
+    .generate-all-clips { width:100%; max-width:300px; }
     .copy-row { padding: 13px 20px 17px; border-top: 1px solid var(--line-soft); display:flex; align-items:center; flex-wrap:wrap; gap:9px; }
     .copy-button {
       min-height:42px; border: 1px solid #3a3740; background: transparent; color: #aaa7b0; padding: 8px 11px;
@@ -191,6 +238,15 @@
       .section-body { padding:3px 15px 13px; }
       .entry { grid-template-columns:27px 1fr; gap:8px; padding:15px 0; }
       .copy-row { padding:11px 15px 14px; }
+      .topbar-meta { gap:6px; }
+      .status { gap:6px; font-size:8px; }
+      .credits-display { max-width:132px; padding:5px 6px; font-size:8px; }
+      .video-model-toolbar { grid-template-columns:1fr; gap:9px; margin:-3px -15px 5px; padding:12px 15px; }
+      .video-model-control { align-items:stretch; flex-direction:column; gap:7px; }
+      .video-model-select { width:100%; }
+      .video-batch-row { margin:5px -15px -13px; padding:14px 15px 13px; }
+      .generate-all-clips { max-width:none; width:100%; }
+      .clip-button { width:100%; min-height:44px; }
       .music-block { padding:17px 15px; }
       .footer { font-size:8px; }
     }
@@ -206,7 +262,12 @@
       <span class="brand-name">Mozkoli</span>
     </div>
     <div class="desk-label">Independent film development</div>
-    <div class="status"><span class="status-dot"></span><span>Development desk</span></div>
+    <div class="topbar-meta">
+      <div class="status"><span class="status-dot"></span><span>Development desk</span></div>
+      <div class="credits-display" id="credits-display" hidden aria-live="polite">
+        <span id="credits-text"></span>
+      </div>
+    </div>
   </header>
   <main class="shell">
     <section class="intro">
@@ -263,6 +324,22 @@
       const results = document.getElementById("results");
       const overview = document.getElementById("overview");
       const sections = document.getElementById("sections");
+      const creditsDisplay = document.getElementById("credits-display");
+      const creditsText = document.getElementById("credits-text");
+      const generatedVideoUrls = new Set();
+      let filmPlanGenerating = false;
+      let videoGenerationInProgress = false;
+      let videoModelSelect = null;
+      let videoBatchButton = null;
+      let videoBatchProgress = null;
+      let videoClipControls = [];
+
+      const VIDEO_MODELS = [
+        { value: "google/veo-3.1-fast", label: "Veo 3.1 Fast — Best quality" },
+        { value: "google/gemini-omni-1.1-flash", label: "Gemini Omni 1.1 Flash — Fast" },
+        { value: "bytedance/seedance-2.0", label: "Seedance 2.0 — Cinematic" },
+        { value: "bytedance/seedance-1-pro-fast", label: "Seedance 1 Pro Fast — Fastest" }
+      ];
 
       storyInput.addEventListener("input", () => {
         charCount.textContent = `${storyInput.value.length.toLocaleString()} / 1,200`;
@@ -277,6 +354,232 @@
 
       function normalizedList(value) {
         return Array.isArray(value) ? value : [];
+      }
+
+      function makeClipStatus() {
+        const element = document.createElement("div");
+        element.className = "clip-status";
+        element.hidden = true;
+        element.setAttribute("role", "status");
+        element.setAttribute("aria-live", "polite");
+        const spinner = document.createElement("span");
+        spinner.className = "spinner";
+        spinner.setAttribute("aria-hidden", "true");
+        const text = document.createElement("span");
+        element.append(spinner, text);
+        return { element, spinner, text };
+      }
+
+      function setClipStatus(status, message, loading = false, isError = false) {
+        if (!status) return;
+        status.element.hidden = false;
+        status.spinner.hidden = !loading;
+        status.text.textContent = message;
+        status.element.classList.toggle("error", isError);
+      }
+
+      function updateVideoControlDisabledState() {
+        const disabled = filmPlanGenerating || videoGenerationInProgress;
+        if (videoModelSelect) videoModelSelect.disabled = disabled;
+        if (videoBatchButton) videoBatchButton.disabled = disabled;
+        videoClipControls.forEach(({ button: clipButton }) => {
+          clipButton.disabled = disabled;
+        });
+        button.disabled = disabled;
+      }
+
+      function updateCreditsDisplay(headerValue) {
+        if (!headerValue) return;
+        let headers;
+        try {
+          headers = JSON.parse(headerValue);
+        } catch {
+          return;
+        }
+        if (!headers || typeof headers !== "object") return;
+        const entries = Object.entries(headers);
+        if (entries.length === 0) return;
+        const balance = entries.find(([name]) => /balance|remaining/i.test(name));
+        const cost = entries.find(([name]) => /cost|spent|used/i.test(name));
+        const parts = [];
+        if (balance) parts.push(`Pollen ${balance[1]}`);
+        if (cost) parts.push(`Last clip ${cost[1]}`);
+        if (parts.length === 0) {
+          parts.push(...entries.slice(0, 2).map(([name, value]) =>
+            `${name.replace(/^x-(?:pollinations-)?/i, "").replace(/-/g, " ")} ${value}`
+          ));
+        }
+        creditsText.textContent = parts.join(" · ");
+        creditsDisplay.hidden = false;
+      }
+
+      async function requestVideoClip(prompt, model) {
+        const response = await fetch("/generate-video", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Accept": "video/mp4, application/json" },
+          body: JSON.stringify({ prompt, model })
+        });
+        if (!response.ok) {
+          let payload;
+          try {
+            payload = await response.json();
+          } catch {
+            // Use the HTTP status below when the server did not return JSON.
+          }
+          throw new Error(
+            payload?.error || `Video generation failed (${response.status}). Please try again.`
+          );
+        }
+        const contentType = (response.headers.get("content-type") || "").toLowerCase();
+        if (!contentType.includes("video/mp4") && !contentType.includes("application/octet-stream")) {
+          throw new Error("The server did not return an MP4 video. Please try again.");
+        }
+        const blob = await response.blob();
+        if (!blob.size) throw new Error("The generated clip was empty. Please try again.");
+        updateCreditsDisplay(response.headers.get("x-mozkoli-credits"));
+        return blob;
+      }
+
+      function makeClipControl(item, index, total) {
+        const panel = document.createElement("div");
+        panel.className = "clip-control";
+        const clipButton = document.createElement("button");
+        clipButton.type = "button";
+        clipButton.className = "clip-button";
+        const buttonSpinner = document.createElement("span");
+        buttonSpinner.className = "clip-button-spinner";
+        buttonSpinner.hidden = true;
+        buttonSpinner.setAttribute("aria-hidden", "true");
+        const buttonLabel = document.createElement("span");
+        buttonLabel.textContent = "Generate Clip";
+        clipButton.append(buttonSpinner, buttonLabel);
+
+        const status = makeClipStatus();
+        const error = document.createElement("p");
+        error.className = "clip-error";
+        error.hidden = true;
+        error.setAttribute("role", "alert");
+        const video = document.createElement("video");
+        video.className = "generated-video";
+        video.controls = true;
+        video.playsInline = true;
+        video.preload = "metadata";
+        video.hidden = true;
+
+        const control = {
+          prompt: item.prompt,
+          index,
+          total,
+          button: clipButton,
+          buttonLabel,
+          buttonSpinner,
+          status,
+          error,
+          video,
+          videoUrl: null
+        };
+        videoClipControls.push(control);
+        clipButton.addEventListener("click", () => runSingleClip(control));
+        panel.append(clipButton, status.element, error, video);
+        return panel;
+      }
+
+      async function generateClip(control) {
+        const clipNumber = control.index + 1;
+        const promptText = typeof control.prompt === "string" ? control.prompt.trim() : "";
+        if (!promptText) throw new Error("This motion prompt is empty.");
+
+        control.error.hidden = true;
+        control.buttonLabel.textContent = "Generating clip…";
+        control.buttonSpinner.hidden = false;
+        setClipStatus(control.status, `Generating clip ${clipNumber} of ${control.total}...`, true);
+        try {
+          const blob = await requestVideoClip(promptText, videoModelSelect.value);
+          if (control.videoUrl) {
+            URL.revokeObjectURL(control.videoUrl);
+            generatedVideoUrls.delete(control.videoUrl);
+          }
+          control.videoUrl = URL.createObjectURL(blob);
+          generatedVideoUrls.add(control.videoUrl);
+          control.video.src = control.videoUrl;
+          control.video.dataset.videoUrl = control.videoUrl;
+          control.video.hidden = false;
+          control.video.load();
+          setClipStatus(control.status, `Clip ${clipNumber} is ready.`, false);
+        } catch (error) {
+          const message = error instanceof Error
+            ? error.message
+            : "Video generation failed. Please try again.";
+          control.error.textContent = message;
+          control.error.hidden = false;
+          setClipStatus(control.status, `Clip ${clipNumber} failed.`, false, true);
+          throw error instanceof Error ? error : new Error(message);
+        } finally {
+          control.buttonLabel.textContent = control.videoUrl ? "Regenerate Clip" : "Generate Clip";
+          control.buttonSpinner.hidden = true;
+        }
+      }
+
+      async function runSingleClip(control) {
+        if (videoGenerationInProgress || filmPlanGenerating) return;
+        videoGenerationInProgress = true;
+        updateVideoControlDisabledState();
+        setClipStatus(videoBatchProgress, `Generating clip ${control.index + 1} of ${control.total}...`, true);
+        try {
+          await generateClip(control);
+          setClipStatus(videoBatchProgress, `Clip ${control.index + 1} is ready.`, false);
+        } catch (error) {
+          const message = error instanceof Error ? error.message : "Please try again.";
+          setClipStatus(videoBatchProgress, `Clip ${control.index + 1} failed: ${message}`, false, true);
+        } finally {
+          videoGenerationInProgress = false;
+          updateVideoControlDisabledState();
+        }
+      }
+
+      async function runAllClips() {
+        if (videoGenerationInProgress || filmPlanGenerating) return;
+        if (videoClipControls.length !== 7) {
+          setClipStatus(videoBatchProgress, "This film plan does not contain all 7 motion prompts.", false, true);
+          return;
+        }
+        videoGenerationInProgress = true;
+        updateVideoControlDisabledState();
+        let completed = 0;
+        try {
+          for (const control of videoClipControls) {
+            if (control.videoUrl) {
+              completed += 1;
+              continue;
+            }
+            setClipStatus(
+              videoBatchProgress,
+              `Generating clip ${control.index + 1} of ${videoClipControls.length}...`,
+              true
+            );
+            try {
+              await generateClip(control);
+              completed += 1;
+            } catch (error) {
+              const message = error instanceof Error ? error.message : "Please try again.";
+              setClipStatus(
+                videoBatchProgress,
+                `Stopped at clip ${control.index + 1} of 7: ${message}`,
+                false,
+                true
+              );
+              return;
+            }
+          }
+          setClipStatus(
+            videoBatchProgress,
+            completed === 7 ? "All 7 clips are ready." : `${completed} of 7 clips are ready.`,
+            false
+          );
+        } finally {
+          videoGenerationInProgress = false;
+          updateVideoControlDisabledState();
+        }
       }
 
       function addCopyControl(container, getText, openAction) {
@@ -328,7 +631,7 @@
         container.append(row);
       }
 
-      function sectionCard(index, title, count, entries, plainText, openAction) {
+      function sectionCard(index, title, count, entries, plainText, openAction, options = {}) {
         const card = document.createElement("article");
         card.className = "section-card";
         const head = document.createElement("div");
@@ -341,7 +644,9 @@
         card.append(head);
         const body = document.createElement("div");
         body.className = "section-body";
+        if (options.bodyTop) body.append(options.bodyTop);
         entries.forEach((entry, i) => body.append(entry, document.createDocumentFragment()));
+        if (options.bodyBottom) body.append(options.bodyBottom);
         card.append(body);
         addCopyControl(card, plainText, openAction);
         return card;
@@ -357,6 +662,12 @@
       }
 
       function renderPlan(plan) {
+        generatedVideoUrls.forEach((videoUrl) => URL.revokeObjectURL(videoUrl));
+        generatedVideoUrls.clear();
+        videoClipControls = [];
+        videoModelSelect = null;
+        videoBatchButton = null;
+        videoBatchProgress = null;
         overview.replaceChildren();
         sections.replaceChildren();
 
@@ -433,19 +744,60 @@
         }));
 
         const motionPrompts = normalizedList(plan.motionPrompts);
-        sections.append(sectionCard(4, "Gemini video prompts", `${motionPrompts.length} prompts`, motionPrompts.map((item, i) => {
+        const videoToolbar = document.createElement("div");
+        videoToolbar.className = "video-model-toolbar";
+        const modelControl = document.createElement("div");
+        modelControl.className = "video-model-control";
+        const modelLabel = document.createElement("label");
+        modelLabel.htmlFor = "video-model-select";
+        modelLabel.textContent = "Video model";
+        videoModelSelect = document.createElement("select");
+        videoModelSelect.id = "video-model-select";
+        videoModelSelect.className = "video-model-select";
+        VIDEO_MODELS.forEach((model) => {
+          const option = document.createElement("option");
+          option.value = model.value;
+          option.textContent = model.label;
+          videoModelSelect.append(option);
+        });
+        modelControl.append(modelLabel, videoModelSelect);
+        videoToolbar.append(
+          modelControl,
+          textElement(
+            "p",
+            "video-model-note",
+            "Video generation uses Pollinations credits. Try one clip before generating all seven."
+          )
+        );
+
+        const batchRow = document.createElement("div");
+        batchRow.className = "video-batch-row";
+        videoBatchButton = document.createElement("button");
+        videoBatchButton.type = "button";
+        videoBatchButton.className = "generate-all-clips";
+        videoBatchButton.textContent = "Generate All 7 Clips";
+        videoBatchProgress = makeClipStatus();
+        videoBatchButton.addEventListener("click", runAllClips);
+        batchRow.append(videoBatchButton, videoBatchProgress.element);
+
+        const motionSection = sectionCard(4, "Gemini video prompts", `${motionPrompts.length} prompts`, motionPrompts.map((item, i) => {
           const entry = document.createElement("div");
           entry.className = "entry";
           entry.append(textElement("div", "entry-number", String(item.shot ?? i + 1).padStart(2, "0")));
           const copy = document.createElement("div");
           copy.append(textElement("h4", "entry-title", `Movement ${item.shot ?? i + 1}`));
           copy.append(textElement("p", "", item.prompt));
+          copy.append(makeClipControl(item, i, motionPrompts.length));
           entry.append(copy);
           return entry;
         }), () => motionPrompts.map((item, i) => `Shot ${item.shot ?? i + 1}\n${item.prompt || "—"}`).join("\n\n"), {
           label: "Copy & Open Gemini",
           url: "https://gemini.google.com"
-        }));
+        }, {
+          bodyTop: videoToolbar,
+          bodyBottom: batchRow
+        });
+        sections.append(motionSection);
 
         const musicCard = document.createElement("article");
         musicCard.className = "section-card";
@@ -465,10 +817,16 @@
           url: "https://suno.com"
         });
         sections.append(musicCard);
+        updateVideoControlDisabledState();
       }
 
       form.addEventListener("submit", async (event) => {
         event.preventDefault();
+        if (videoGenerationInProgress) {
+          errorBox.textContent = "Wait for the current video clip generation to finish first.";
+          errorBox.classList.add("visible");
+          return;
+        }
         const story = storyInput.value.trim();
         errorBox.classList.remove("visible");
         errorBox.textContent = "";
@@ -478,6 +836,8 @@
           storyInput.focus();
           return;
         }
+        filmPlanGenerating = true;
+        updateVideoControlDisabledState();
         button.disabled = true;
         buttonLabel.textContent = "Developing your film";
         buttonArrow.className = "spinner";
@@ -510,6 +870,8 @@
             : "Something interrupted the session. Check your connection and try again.";
           errorBox.classList.add("visible");
         } finally {
+          filmPlanGenerating = false;
+          updateVideoControlDisabledState();
           button.disabled = false;
           buttonLabel.textContent = "Develop my film";
           buttonArrow.className = "arrow";

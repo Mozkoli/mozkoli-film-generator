@@ -8,6 +8,15 @@ const appDirectory = path.dirname(fileURLToPath(import.meta.url));
 const publicDirectory = path.join(appDirectory, "public");
 const MAX_STORY_LENGTH = 1200;
 const GENERATION_TIMEOUT_MS = 120_000;
+const MAX_VIDEO_PROMPT_LENGTH = 2500;
+const MAX_VIDEO_RESPONSE_BYTES = 100 * 1024 * 1024;
+const VIDEO_GENERATION_TIMEOUT_MS = 300_000;
+const VIDEO_MODELS = new Set([
+  "google/veo-3.1-fast",
+  "google/gemini-omni-1.1-flash",
+  "bytedance/seedance-2.0",
+  "bytedance/seedance-1-pro-fast",
+]);
 const FILM_PLAN_INSTRUCTIONS = [
   "Create a complete, cinematic film development plan from the user's story idea.",
   "Return only valid JSON with no Markdown fences and exactly these keys:",
@@ -157,6 +166,105 @@ app.post("/generate", async (request, response) => {
   });
 });
 
+app.post("/generate-video", async (request, response) => {
+  const prompt =
+    typeof request.body?.prompt === "string" ? request.body.prompt.trim() : "";
+  const model =
+    typeof request.body?.model === "string"
+      ? request.body.model.trim()
+      : "google/veo-3.1-fast";
+  const pollinationsKey = process.env.POLLINATIONS_API_KEY?.trim();
+
+  if (!pollinationsKey) {
+    return response.status(503).json({
+      error: "Add POLLINATIONS_API_KEY in Replit Secrets to generate video clips.",
+    });
+  }
+
+  if (!prompt) {
+    return response.status(400).json({ error: "A motion prompt is required." });
+  }
+
+  if (prompt.length > MAX_VIDEO_PROMPT_LENGTH) {
+    return response.status(400).json({
+      error: `Keep each motion prompt under ${MAX_VIDEO_PROMPT_LENGTH} characters.`,
+    });
+  }
+
+  if (!VIDEO_MODELS.has(model)) {
+    return response.status(400).json({ error: "Choose a supported video model." });
+  }
+
+  const controller = new AbortController();
+  const timeout = setTimeout(
+    () => controller.abort(),
+    VIDEO_GENERATION_TIMEOUT_MS,
+  );
+
+  try {
+    const videoUrl = new URL(
+      `https://gen.pollinations.ai/video/${encodeURIComponent(prompt)}`,
+    );
+    videoUrl.searchParams.set("model", model);
+    const upstream = await fetch(videoUrl, {
+      method: "GET",
+      headers: {
+        Accept: "video/mp4",
+        Authorization: `Bearer ${pollinationsKey}`,
+      },
+      signal: controller.signal,
+    });
+
+    if (!upstream.ok) {
+      await upstream.body?.cancel().catch(() => {});
+      return response
+        .status(upstream.status)
+        .json({ error: providerStatusMessage("Pollinations video", upstream.status) });
+    }
+
+    const contentType = (upstream.headers.get("content-type") || "")
+      .split(";")[0]
+      .trim()
+      .toLowerCase();
+    if (contentType !== "video/mp4" && contentType !== "application/octet-stream") {
+      await upstream.body?.cancel().catch(() => {});
+      return response.status(502).json({
+        error: "Pollinations did not return a playable MP4. Try another video model.",
+      });
+    }
+
+    const videoBuffer = await readVideoBuffer(
+      upstream,
+      MAX_VIDEO_RESPONSE_BYTES,
+    );
+    const creditHeaders = getPollinationsCreditHeaders(upstream.headers);
+
+    response.set({
+      "Cache-Control": "no-store",
+      "Content-Disposition": 'inline; filename="mozkoli-film-clip.mp4"',
+      "X-Content-Type-Options": "nosniff",
+    });
+    if (Object.keys(creditHeaders).length > 0) {
+      response.set("X-Mozkoli-Credits", JSON.stringify(creditHeaders));
+    }
+    return response.status(200).type("video/mp4").send(videoBuffer);
+  } catch (error) {
+    if (error instanceof ProviderRequestError) {
+      return response.status(error.status).json({ error: error.userMessage });
+    }
+    if (error instanceof Error && error.name === "AbortError") {
+      return response.status(504).json({
+        error: "Video generation timed out. Try a faster model or generate one clip again.",
+      });
+    }
+    return response.status(502).json({
+      error: "Pollinations could not complete this video. Please try again.",
+    });
+  } finally {
+    clearTimeout(timeout);
+  }
+});
+
 app.use(
   express.static(publicDirectory, {
     index: "index.html",
@@ -241,6 +349,58 @@ async function requestFilmPlan({ provider, url, token, model, messages }) {
   } finally {
     clearTimeout(timeout);
   }
+}
+
+async function readVideoBuffer(upstream, maxBytes) {
+  if (!upstream.body) {
+    throw new ProviderRequestError(
+      "Pollinations video",
+      502,
+      "Pollinations returned an empty video response.",
+    );
+  }
+
+  const chunks = [];
+  let totalBytes = 0;
+  for await (const chunk of upstream.body) {
+    const buffer = Buffer.from(chunk);
+    totalBytes += buffer.length;
+    if (totalBytes > maxBytes) {
+      throw new ProviderRequestError(
+        "Pollinations video",
+        413,
+        "The generated clip exceeded the 100 MB app limit.",
+      );
+    }
+    chunks.push(buffer);
+  }
+
+  if (totalBytes === 0) {
+    throw new ProviderRequestError(
+      "Pollinations video",
+      502,
+      "Pollinations returned an empty video response.",
+    );
+  }
+  return Buffer.concat(chunks, totalBytes);
+}
+
+function getPollinationsCreditHeaders(headers) {
+  const creditHeaders = {};
+  headers.forEach((value, rawName) => {
+    const name = rawName.toLowerCase();
+    const isCreditHeader =
+      /^x-(?:pollinations-)?pollen(?:-[a-z0-9-]+)?$/.test(name) ||
+      /^x-(?:pollinations-)?credits?(?:-[a-z0-9-]+)?$/.test(name) ||
+      /^x-pollinations-(?:balance|remaining|cost|spent|used)(?:-[a-z0-9-]+)?$/.test(
+        name,
+      );
+    const safeValue = value.trim();
+    if (isCreditHeader && safeValue.length > 0 && safeValue.length <= 100) {
+      creditHeaders[name] = safeValue;
+    }
+  });
+  return creditHeaders;
 }
 
 function providerStatusMessage(provider, status) {
